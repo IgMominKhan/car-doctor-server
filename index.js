@@ -11,6 +11,7 @@ const port = process.env.PORT || 8080;
 // middelewares
 app.use(cors());
 app.use(express.json());
+app.options("/bookings/:id", cors());
 
 // is the server running
 app.get("/", (req, res) => res.send("Car-doctor-server is running"));
@@ -83,9 +84,37 @@ async function run() {
       const result = await bookingCollection.find(query).toArray();
       res.send(result);
     });
+
     app.post("/bookings", async (req, res) => {
       const booking = req.body;
       const result = await bookingCollection.insertOne(booking);
+      res.send(result);
+    });
+
+    // update order
+    app.patch("/bookings/:id", cors(), async (req, res) => {
+      const _id = req.params.id;
+      const query = {
+        _id: new ObjectId(_id),
+      };
+
+      const options = {
+        $set: {
+          status: req.body.confirm,
+        },
+      };
+
+      const result = await bookingCollection.updateOne(query, options);
+      res.send(result);
+    });
+
+    // delete order
+    app.delete("/bookings/:id", async (req, res) => {
+      const _id = req.params.id;
+      const query = {
+        _id: new ObjectId(_id),
+      };
+      const result = await bookingCollection.deleteOne(query);
       res.send(result);
     });
   } finally {
