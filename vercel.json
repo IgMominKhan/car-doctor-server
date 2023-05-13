@@ -1,11 +1,12 @@
 {"version":2,
-  "build":[{
+  "builds":[{
     "src":"index.js",
     "use":"@now/node"
   }],
-  "routes":{[
-    "src": */(.*),
+  "routes":[{
+    "src":"/(.*)",
     "dest":"index.js"
-  ]}
-  
+  }
+  ]
+ 
 }
