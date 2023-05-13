@@ -11,7 +11,6 @@ const port = process.env.PORT || 8080;
 // middelewares
 app.use(cors());
 app.use(express.json());
-app.options("/bookings/:id", cors());
 
 // is the server running
 app.get("/", (req, res) => res.send("Car-doctor-server is running"));
@@ -92,7 +91,7 @@ async function run() {
     });
 
     // update order
-    app.patch("/bookings/:id", cors(), async (req, res) => {
+    app.put("/bookings/:id", cors(), async (req, res) => {
       const _id = req.params.id;
       const query = {
         _id: new ObjectId(_id),
