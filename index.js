@@ -3,6 +3,7 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
+import Jwt, { verify } from "jsonwebtoken";
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use(express.json());
 // is the server running
 app.get("/", (req, res) => res.send("Car-doctor-server is running"));
 
+// mongodb connection uri
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.xfw1t3g.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -25,6 +27,29 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+const verifyJwt = (req, res, next) => {
+  console.log("headers", req.headers);
+  console.log("authorizatpion", req.headers.authorization);
+  const authorization = req.headers.authorization;
+  // console.log(authorization);
+  if (!authorization) {
+    return res.status(401).send({ error: true, message: "unauthorize access" });
+  }
+
+  const token = authorization.split(" ")[1];
+
+  Jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).send({ error: 1, message: "unauthorize access" });
+    }
+
+    req.decoded = decoded;
+    next();
+    // console.log(decoded);
+  });
+  // console.log(authorization);
+};
 
 async function run() {
   try {
@@ -37,6 +62,17 @@ async function run() {
     const bookingCollection = db.collection("booking");
 
     console.log(`Car-doctor-server is connected with mongodb`);
+
+    // create and send json token
+    app.post("/token", (req, res) => {
+      const user = req.body;
+      console.log(user);
+      const token = Jwt.sign(user, process.env.JWT_SECRET, {
+        expiresIn: "1h",
+      });
+      console.log(token);
+      res.send({ token });
+    });
 
     // return services data
     app.get("/services", async (req, res) => {
@@ -72,14 +108,17 @@ async function run() {
     });
 
     // booking
-    app.get("/bookings", async (req, res) => {
-      let query = {};
-      if (req.query) {
-        query = {
-          email: req.query.email,
-        };
-      }
+    app.get("/bookings", verifyJwt, async (req, res) => {
+      console.log("req", req);
 
+      const decoded = req.decoded;
+
+      if (req.query.email !== decoded.email) {
+        res.status(403).send({ error: 1, message: "unauthorize access" });
+      }
+      const query = {
+        email: req.query.email,
+      };
       const result = await bookingCollection.find(query).toArray();
       res.send(result);
     });
